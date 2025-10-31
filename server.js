@@ -29,52 +29,43 @@ async function saveChatToSheet(data) {
 
 /////////////////////////////////////////////////////////////
 
-// ✅ ฟังก์ชันช่วย: ค้นหา URL รูปโปรไฟล์ที่ถูกต้อง (ปรับปรุงแล้ว)
+// ✅ ฟังก์ชันช่วย: ค้นหา URL รูปโปรไฟล์ที่ถูกต้อง
 function getProfileImageUrl(userData) {
-    // ลอง log ข้อมูลทั้งหมดเพื่อดูว่ามีฟิลด์อะไรบ้าง
-    console.log('User data structure:', JSON.stringify(userData, null, 2));
+    // 1. ตรวจสอบ profilePicture.url (เป็น array)
+    if (userData.profilePicture && 
+        userData.profilePicture.url && 
+        Array.isArray(userData.profilePicture.url) && 
+        userData.profilePicture.url.length > 0) {
+        console.log('✅ Found profile image in profilePicture.url[0]');
+        return userData.profilePicture.url[0]; // ใช้ URL แรกใน array
+    }
     
-    // ลำดับความสำคัญของฟิลด์ที่ต้องตรวจสอบ
+    // 2. ตรวจสอบฟิลด์อื่นๆ (สำหรับกรณีที่โครงสร้างข้อมูลอาจเปลี่ยน)
     const possibleFields = [
         'profilePictureUrl',
         'avatarThumb',
         'avatarUrl',
         'avatarLarger',
-        'avatarMedium',
-        'avatar_thumb',
-        'avatar_larger',
-        'avatar_medium'
+        'avatarMedium'
     ];
     
-    // วนลูปหาฟิลด์ที่มีค่า
     for (const field of possibleFields) {
-        if (userData[field] && userData[field].trim() !== '') {
-            console.log(`✅ Found profile image at field: ${field}`);
-            return userData[field];
-        }
-    }
-    
-    // ลองเช็คใน nested object (บางครั้งอาจอยู่ใน userData.picture หรือ userData.avatar)
-    if (userData.picture && typeof userData.picture === 'object') {
-        for (const field of possibleFields) {
-            if (userData.picture[field]) {
-                console.log(`✅ Found profile image at picture.${field}`);
-                return userData.picture[field];
+        if (userData[field]) {
+            // ถ้าเป็น array ให้ใช้ตัวแรก
+            if (Array.isArray(userData[field]) && userData[field].length > 0) {
+                console.log(`✅ Found profile image at ${field}[0]`);
+                return userData[field][0];
             }
-        }
-    }
-    
-    if (userData.avatar && typeof userData.avatar === 'object') {
-        for (const field of possibleFields) {
-            if (userData.avatar[field]) {
-                console.log(`✅ Found profile image at avatar.${field}`);
-                return userData.avatar[field];
+            // ถ้าเป็น string ให้ใช้เลย
+            if (typeof userData[field] === 'string' && userData[field].trim() !== '') {
+                console.log(`✅ Found profile image at ${field}`);
+                return userData[field];
             }
         }
     }
     
     console.log('❌ No profile image URL found');
-    return "https://via.placeholder.com/150?text=No+Image"; // รูป placeholder
+    return ""; // ส่งค่าว่างแทน placeholder
 }
 
 /////////////////////////////////////////////////////////////
@@ -100,10 +91,6 @@ io.on('connection', (socket) => {
 
         // ✅ CHAT Event
         connection.on(WebcastEvent.CHAT, data => {
-            // Log ข้อมูลทั้งหมดเพื่อ debug
-            console.log('=== RAW CHAT DATA ===');
-            console.log('Full data:', JSON.stringify(data, null, 2));
-            
             const profileUrl = getProfileImageUrl(data.user);
             
             const chatData = {
@@ -115,7 +102,8 @@ io.on('connection', (socket) => {
             };
 
             console.log(`\n📩 Chat from ${chatData.nickname}`);
-            console.log(`🔗 Profile URL: ${chatData.profilePictureUrl}\n`);
+            console.log(`🔗 Profile URL: ${chatData.profilePictureUrl}`);
+            console.log('=====================================\n');
             
             // ส่งข้อมูลไปยัง Frontend
             socket.emit('chat', chatData); 
@@ -126,9 +114,6 @@ io.on('connection', (socket) => {
 
         // ✅ เพิ่ม MEMBER Event (เมื่อมีคนเข้าห้อง live)
         connection.on(WebcastEvent.MEMBER, data => {
-            console.log('=== NEW MEMBER ===');
-            console.log('Member data:', JSON.stringify(data, null, 2));
-            
             const profileUrl = getProfileImageUrl(data.user);
             
             const memberData = {
