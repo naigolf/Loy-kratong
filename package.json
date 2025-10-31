@@ -1,0 +1,14 @@
+{
+  "name": "tiktok-live-chat",
+  "version": "1.0.0",
+  "description": "TikTok Live Chat Viewer on Render",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5",
+    "tiktok-live-connector": "^2.0.0"
+  }
+}
