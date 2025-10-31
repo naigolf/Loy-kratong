@@ -1,0 +1,73 @@
+const { TikTokLiveConnection, WebcastEvent } = require('tiktok-live-connector');
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const axios = require('axios'); // ✅ 1. เพิ่ม axios สำหรับการเรียก API
+
+// ⚠️ 2. แทนที่ด้วย URL ของ Web App ที่คุณเผยแพร่จาก Apps Script
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE'; 
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.use(express.static('public')); 
+
+let connection = null;
+
+// ✅ 3. ฟังก์ชันใหม่: ส่งข้อมูลไปที่ Apps Script API
+async function saveChatToSheet(data) {
+    try {
+        const response = await axios.post(APPS_SCRIPT_URL, data, {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        // แสดงผลลัพธ์จาก Apps Script (เช่น success/error)
+        console.log('Apps Script Response:', response.data); 
+    } catch (error) {
+        console.error('Error sending data to Apps Script:', error.message);
+    }
+}
+
+io.on('connection', (socket) => {
+    console.log('Frontend connected');
+
+    socket.on('start', ({ uniqueId }) => {
+        if (connection) {
+            connection.disconnect();
+            connection = null;
+        }
+
+        connection = new TikTokLiveConnection(uniqueId);
+
+        connection.connect().then(state => {
+            console.log('Connected to roomId', state.roomId);
+            socket.emit('connected', { roomId: state.roomId });
+        }).catch(err => {
+            console.error('Connect error', err);
+            socket.emit('error', { msg: err.toString() });
+        });
+
+        // ✅ 4. CHAT Event ที่ถูกแก้ไข
+        connection.on(WebcastEvent.CHAT, data => {
+            const chatData = {
+                nickname: data.user.nickname,
+                comment: data.comment
+            };
+            
+            // ส่งข้อมูลไปยัง Frontend ผ่าน Socket.io (โค้ดเดิม)
+            socket.emit('chat', chatData); 
+
+            // ส่งข้อมูลไปยัง Apps Script (โค้ดที่เพิ่มใหม่)
+            saveChatToSheet(chatData);
+        });
+
+        // ❌ ลบ Event LISTENERS สำหรับ GIFT, LIKE และอื่นๆ ออก
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+});
