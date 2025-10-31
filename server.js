@@ -53,7 +53,8 @@ io.on('connection', (socket) => {
         connection.on(WebcastEvent.CHAT, data => {
             const chatData = {
                 nickname: data.user.nickname,
-                comment: data.comment
+                comment: data.comment,
+                profilePictureUrl: data.user.profilePictureUrl
             };
             
             // ส่งข้อมูลไปยัง Frontend ผ่าน Socket.io (โค้ดเดิม)
