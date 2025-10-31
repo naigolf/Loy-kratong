@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const axios = require('axios'); // ✅ 1. เพิ่ม axios สำหรับการเรียก API
 
 // ⚠️ 2. แทนที่ด้วย URL ของ Web App ที่คุณเผยแพร่จาก Apps Script
-const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE'; 
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzD6oANxjEIOMDPv3IOQ4AIlJrx5MmZzDuI1kQvNfohw9bSR7QD1P6w6en5kdZjM2YWoA/exec'; 
 
 const app = express();
 const server = http.createServer(app);
