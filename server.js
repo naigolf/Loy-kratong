@@ -1,3 +1,5 @@
+/// ก่อนแก้
+
 const { TikTokLiveConnection, WebcastEvent } = require('tiktok-live-connector');
 const express = require('express');
 const http = require('http');
