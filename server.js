@@ -30,6 +30,31 @@ async function saveChatToSheet(data) {
     }
 }
 
+/////////////////////////////////////////////////////////////
+
+// ✅ ฟังก์ชันช่วย: ค้นหา URL รูปโปรไฟล์ที่ถูกต้อง
+function getProfileImageUrl(userData) {
+    // 1. ลองใช้ avatarThumb (ฟิลด์ที่นิยมใช้ที่สุด)
+    if (userData.avatarThumb) {
+        return userData.avatarThumb;
+    }
+    // 2. ลองใช้ profilePictureUrl (ฟิลด์ที่เคยมีการใช้งาน)
+    if (userData.profilePictureUrl) {
+        return userData.profilePictureUrl;
+    }
+    // 3. ลองใช้ avatarUrl (อีกหนึ่งทางเลือก)
+    if (userData.avatarUrl) {
+        return userData.avatarUrl;
+    }
+    // คืนค่าเป็นสตริงว่างเปล่า ถ้าไม่พบฟิลด์ใดเลย
+    return ""; 
+}
+
+/////////////////////////////////////////////////////////////
+
+
+
+
 io.on('connection', (socket) => {
     console.log('Frontend connected');
 
@@ -54,8 +79,12 @@ io.on('connection', (socket) => {
             const chatData = {
                 nickname: data.user.nickname,
                 comment: data.comment,
-                profilePictureUrl: data.user.profilePictureUrl
+                //profilePictureUrl: data.user.profilePictureUrl
+                profilePictureUrl: getProfileImageUrl(data.user)
             };
+
+            // ตรวจสอบใน Console ของ Node.js ว่าได้ URL จริงหรือไม่
+            console.log(`Chat from ${chatData.nickname}. Profile URL: ${chatData.profilePictureUrl}`);
             
             // ส่งข้อมูลไปยัง Frontend ผ่าน Socket.io (โค้ดเดิม)
             socket.emit('chat', chatData); 
