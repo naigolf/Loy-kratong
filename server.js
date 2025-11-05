@@ -4,8 +4,13 @@ const http = require('http');
 const { Server } = require('socket.io');
 const axios = require('axios');
 
-// URL สำหรับ Google Apps Script ของคุณ
+// URL สำหรับ Google Apps Script (เหมือนเดิม)
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzD6oANxjEIOMDPv3IOQ4AIlJrx5MmZzDuI1kQvNfohw9bSR7QD1P6w6en5kdZjM2YWoA/exec';
+
+// ⬇️⬇️⬇️ 1. ใส่ชื่อช่อง TIKTOK ID (UNIQUE ID) ของคุณที่นี่ ⬇️⬇️⬇️
+// (ต้องขึ้นต้นด้วย @)
+const TIKTOK_UNIQUE_ID = "@chachangthong"; 
+// ⬆️⬆️⬆️ 1. ใส่ชื่อช่อง TIKTOK ID (UNIQUE ID) ของคุณที่นี่ ⬆️⬆️⬆️
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +20,7 @@ app.use(express.static('public'));
 
 let connection = null;
 
+// ฟังก์ชัน saveChatToSheet (เหมือนเดิม)
 async function saveChatToSheet(data) {
     try {
         const response = await axios.post(APPS_SCRIPT_URL, data, {
@@ -22,21 +28,18 @@ async function saveChatToSheet(data) {
                 'Content-Type': 'application/json'
             }
         });
-        console.log('Apps Script Response:', response.data);
+        // console.log('Apps Script Response:', response.data);
     } catch (error) {
         console.error('Error sending data to Apps Script:', error.message);
     }
 }
 
-/////////////////////////////////////////////////////////////
-
-// ✅ ฟังก์ชันช่วย: ค้นหา URL รูปโปรไฟล์ที่ถูกต้อง (เหมือนเดิม)
+// ฟังก์ชัน getProfileImageUrl (เหมือนเดิม)
 function getProfileImageUrl(userData) {
     if (userData.profilePicture &&
         userData.profilePicture.url &&
         Array.isArray(userData.profilePicture.url) &&
         userData.profilePicture.url.length > 0) {
-        // console.log('✅ Found profile image in profilePicture.url[0]');
         return userData.profilePicture.url[0];
     }
     
@@ -51,42 +54,43 @@ function getProfileImageUrl(userData) {
     for (const field of possibleFields) {
         if (userData[field]) {
             if (Array.isArray(userData[field]) && userData[field].length > 0) {
-                // console.log(`✅ Found profile image at ${field}[0]`);
                 return userData[field][0];
             }
             if (typeof userData[field] === 'string' && userData[field].trim() !== '') {
-                // console.log(`✅ Found profile image at ${field}`);
                 return userData[field];
             }
         }
     }
-    
-    // console.log('❌ No profile image URL found');
     return "";
 }
 
-/////////////////////////////////////////////////////////////
-// ✅ NEW: ฟังก์ชันเชื่อมต่อและจัดการการเชื่อมต่อซ้ำอัตโนมัติ
-/////////////////////////////////////////////////////////////
 
+// ฟังก์ชัน connectAndListen (แก้ไขเล็กน้อย)
 function connectAndListen(socket, uniqueId) {
     // 1. ยกเลิกการเชื่อมต่อเก่าหากมี
     if (connection) {
+        console.log(`[${uniqueId}] Disconnecting existing connection...`);
         connection.disconnect();
         connection = null;
     }
 
     // 2. สร้างและเชื่อมต่อใหม่
-    connection = new TikTokLiveConnection(uniqueId);
     console.log(`\n======================================================`);
-    console.log(`✨ Attempting to connect to TikTok Live: ${uniqueId}`);
+    console.log(`✨ [${uniqueId}] Attempting to connect to TikTok Live...`);
     console.log(`======================================================`);
+    
+    connection = new TikTokLiveConnection(uniqueId, {
+        // ⬇️⬇️⬇️ 2. (คำแนะนำ) หากคุณใช้ Render.com แล้วยังเจอปัญหา Error ⬇️⬇️⬇️
+        // ให้ลองหา Proxy มาใส่ตรงนี้ (เอา // ออก)
+        // proxy: "http://USER:PASSWORD@IP_ADDRESS:PORT"
+        // ⬆️⬆️⬆️ 2. (คำแนะนำ) ⬆️⬆️⬆️
+    });
 
     connection.connect().then(state => {
-        console.log('✅ Connected to roomId:', state.roomId);
-        socket.emit('connected', { roomId: state.roomId });
+        console.log(`✅ [${uniqueId}] Connected to roomId: ${state.roomId}`);
+        socket.emit('connected', { roomId: state.roomId, uniqueId: uniqueId });
     }).catch(err => {
-        console.error('❌ Connect error:', err.toString());
+        console.error(`❌ [${uniqueId}] Connect error:`, err.toString());
         socket.emit('error', { msg: '❌ Failed to connect: ' + err.toString() + '. Retrying...' });
         // ลองเชื่อมต่อใหม่ทันทีหากเชื่อมต่อไม่สำเร็จ
         setTimeout(() => connectAndListen(socket, uniqueId), 5000); 
@@ -94,7 +98,7 @@ function connectAndListen(socket, uniqueId) {
 
     // 3. จัดการ Events (CHAT, MEMBER, Error, Disconnect)
 
-    // CHAT Event (เหมือนเดิม)
+    // CHAT Event
     connection.on(WebcastEvent.CHAT, data => {
         const profileUrl = getProfileImageUrl(data.user);
         
@@ -105,14 +109,12 @@ function connectAndListen(socket, uniqueId) {
             profilePictureUrl: profileUrl,
             timestamp: new Date().toISOString()
         };
-
-        // console.log(`\n📩 Chat from ${chatData.nickname}`);
         
         socket.emit('chat', chatData);
         saveChatToSheet(chatData);
     });
 
-    // MEMBER Event (เหมือนเดิม)
+    // MEMBER Event
     connection.on(WebcastEvent.MEMBER, data => {
         const profileUrl = getProfileImageUrl(data.user);
         
@@ -123,50 +125,60 @@ function connectAndListen(socket, uniqueId) {
             action: 'joined',
             timestamp: new Date().toISOString()
         };
-
-        // console.log(`\n👋 ${memberData.nickname} joined!`);
         
         socket.emit('member', memberData);
     });
 
-    // 🔴 Error handling & Auto Reconnect
+    // Error handling
     connection.on('error', (err) => {
-        console.error('🔴 TikTok Live Error (Internal):', err);
+        console.error(`🔴 [${uniqueId}] TikTok Live Error (Internal):`, err);
         socket.emit('error', { msg: '🔴 Live Error. Reconnecting in 5s...' });
         
-        // ยกเลิกการเชื่อมต่อปัจจุบัน (ถ้ามี) และพยายามเชื่อมต่อใหม่
         connection.disconnect();
-        setTimeout(() => connectAndListen(socket, uniqueId), 5000); // ลองใหม่ใน 5 วินาที
+        setTimeout(() => connectAndListen(socket, uniqueId), 5000);
     });
 
-    // ⚠️ Disconnect handling & Auto Reconnect
+    // Disconnect handling
     connection.on('disconnect', () => {
-        console.log('⚠️ Disconnected from TikTok Live. Reconnecting in 5s...');
+        console.log(`⚠️ [${uniqueId}] Disconnected from TikTok Live. Reconnecting in 5s...`);
         socket.emit('error', { msg: '⚠️ Connection lost. Reconnecting in 5s...' });
 
-        // พยายามเชื่อมต่อใหม่ทันทีเมื่อหลุด
         setTimeout(() => connectAndListen(socket, uniqueId), 5000); 
     });
 }
 
+// ⬇️⬇️⬇️ 3. แก้ไข io.on('connection') ⬇️⬇️⬇️
 io.on('connection', (socket) => {
-    console.log('Frontend connected');
+    console.log('✅ Frontend connected (Socket ID: ' + socket.id + ')');
+    console.log(`🚀 Starting TikTok connection for: ${TIKTOK_UNIQUE_ID}`);
 
-    socket.on('start', ({ uniqueId }) => {
-        // เรียกใช้ฟังก์ชันใหม่
+    // เรียกใช้ฟังก์ชัน connectAndListen ทันที
+    // โดยใช้ TIKTOK_UNIQUE_ID ที่เรากำหนดไว้ด้านบน
+    connectAndListen(socket, TIKTOK_UNIQUE_ID);
+
+    // ลบ socket.on('start', ...) ออกไป เพราะไม่จำเป็นแล้ว
+    /* socket.on('start', ({ uniqueId }) => {
         connectAndListen(socket, uniqueId);
     });
+    */
 
     socket.on('disconnect', () => {
-        console.log('Frontend disconnected');
+        console.log('🔌 Frontend disconnected (Socket ID: ' + socket.id + ')');
+        // ⬇️⬇️⬇️ 4. หยุดการเชื่อมต่อเมื่อ frontend ตัดการเชื่อมต่อ ⬇️⬇️⬇️
         if (connection) {
+            console.log('🛑 Stopping TikTok connection...');
             connection.disconnect();
             connection = null;
         }
     });
 });
+// ⬆️⬆️⬆️ 3. สิ้นสุดการแก้ไข io.on('connection') ⬆️⬆️⬆️
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+    console.log(`\n======================================================`);
+    console.log(`✅ Server listening on port ${PORT}`);
+    console.log(`🎯 TikTok ID to monitor: ${TIKTOK_UNIQUE_ID}`);
+    console.log(`📡 Waiting for frontend connection to start...`);
+    console.log(`======================================================`);
 });
