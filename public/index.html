@@ -4,71 +4,192 @@
     <meta charset="UTF-8">
     <title>TikTok Live Chat ลอยกระทง</title>
     <style>
-        body { background: #89a4d7; color: #eee; font-family: sans-serif; text-align: center; }
-        /* Removed voice-related controls in the HTML */
-        #chat { max-width:600px; margin:20px auto; overflow-y: auto; height: 350px; background:#222; padding:10px; border-radius:5px; }
-        .msg { text-align: left; margin:5px 0; padding:8px; border-radius:4px; background:#333; } 
+        body { background: #121212; color: #eee; font-family: 'Tahoma', sans-serif; text-align: center; margin: 0; padding: 0; }
+        h2 { color: #A970FF; } /* สีม่วงพาสเทล */
         
-        input, button { margin: 5px; padding: 8px; border-radius: 5px; border: none; }
-        button { background:#0a84ff; color:white; cursor:pointer; }
+        #status {
+            margin: 15px auto;
+            padding: 10px;
+            background: #282828;
+            border-radius: 8px;
+            max-width: 600px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #FFA726; /* สีส้ม */
+            border: 1px solid #333;
+        }
+
+        #chat { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            overflow-y: auto; 
+            height: 400px; /* เพิ่มความสูงเล็กน้อย */
+            background: #1E1E1E; 
+            padding: 10px; 
+            border-radius: 8px; 
+            border: 1px solid #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        .msg { 
+            text-align: left; 
+            margin: 8px 0; 
+            padding: 10px 12px; 
+            border-radius: 8px; 
+            background: #2C2C2C; 
+            display: flex; /* ใช้ Flexbox */
+            align-items: flex-start; /* จัดให้อยู่บนสุด */
+            line-height: 1.4;
+        }
+        
+        .profile-pic {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0; /* ป้องกันรูปหด */
+            background-color: #444; /* สีพื้นหลัง fallback */
+            background-size: cover;
+            background-position: center;
+        }
+
+        .chat-content {
+            display: flex;
+            flex-direction: column;
+            overflow-wrap: break-word; /* ตัดคำ */
+            word-wrap: break-word;
+            flex-grow: 1;
+            min-width: 0;
+        }
+        
+        .nickname {
+            font-weight: bold;
+            color: #BB86FC; /* สีม่วงอ่อน */
+            font-size: 0.95em;
+        }
+        
+        .comment {
+            color: #E0E0E0; /* สีเทาอ่อน */
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
-    <h2>🟣 TikTok Live Chat ลอยกระทง 🟣 </h2>
+    <h2>🟣 TikTok Live Chat ลอยกระทง 🟣</h2>
 
-    <div>
-        <input id="uniqueId" placeholder="ชื่อบัญชี TikTok" />
-        <button id="btn">เชื่อมต่อ</button>
-        </div>
-
-    <div id="status">ยังไม่ได้เชื่อมต่อ</div>
+    <!-- สถานะการเชื่อมต่อ -->
+    <div id="status">⏳ กำลังเชื่อมต่อกับ Server...</div>
+    
+    <!-- กล่องแชท -->
     <div id="chat"></div>
 
-<script src="/socket.io/socket.io.js"></script>
+<!-- ⬇️⬇️⬇️ แก้ไขจุดนี้ ⬇️⬇️⬇️ -->
+<!-- เปลี่ยนจาก src="/socket.io/socket.io.js" เป็น CDN ที่แน่นอน -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<!-- ⬆️⬆️⬆️ สิ้นสุดการแก้ไข ⬆️⬆️⬆️ -->
+
 <script>
-    const socket = io();
+    const socket = io(); // ตอนนี้ 'io' จะถูกโหลดมาจาก CDN ด้านบนแล้ว
+    const chatBox = document.getElementById('chat');
+    const statusElement = document.getElementById('status');
 
     // ----------------------------------------------------
-    // ส่วนโหลดและการเชื่อมต่อ
+    // ส่วนการเชื่อมต่ออัตโนมัติ (ไม่ต้องใช้ปุ่ม)
     // ----------------------------------------------------
     
-    // Removed all `loadVoices`, `speechSynthesis.onvoiceschanged`, `voiceSelect`, and related code.
+    console.log('กำลังเชื่อมต่อ Socket.io...');
 
-    document.getElementById('btn').onclick = () => {
-        // No longer need to cancel speech or clear speech queues
-        
-        const uid = document.getElementById('uniqueId').value.trim();
-        if (!uid) return alert('กรุณากรอกชื่อบัญชี TikTok');
-        document.getElementById('status').textContent = '⏳ กำลังเชื่อมต่อ...';
-        
-        // Clear chat box when connecting to a new live
-        document.getElementById('chat').innerHTML = ''; 
-        
-        socket.emit('start', { uniqueId: uid });
-    };
-
+    // 1. Server จะเริ่มเชื่อมต่อ TikTok ให้อัตโนมัติ (ตามไฟล์ index.js)
+    // เราแค่รอฟัง Event "connected"
     socket.on('connected', data => {
-        document.getElementById('status').textContent = '✅ เชื่อมต่อ roomId: ' + data.roomId;
+        console.log('Connected to TikTok:', data);
+        statusElement.textContent = `✅ เชื่อมต่อกับ Live ของ ${data.uniqueId} แล้ว (Room ID: ${data.roomId})`;
+        statusElement.style.color = '#4CAF50'; // สีเขียว
     });
 
-    // รับข้อความแชท (CHAT) - แสดงเท่านั้น
+    // 2. รับข้อความแชท (CHAT)
     socket.on('chat', data => {
         const rawComment = data.comment;
         
-        // 1. แสดงในกล่องแชท
+        // สร้าง Element สำหรับแชท
         const div = document.createElement('div');
         div.className = 'msg';
-        div.textContent = `${data.nickname}: ${rawComment}`;
-        const chatBox = document.getElementById('chat');
+        
+        // เพิ่มรูปโปรไฟล์
+        const img = document.createElement('div');
+        img.className = 'profile-pic';
+        img.style.backgroundImage = `url('${data.profilePictureUrl}')`;
+        div.appendChild(img);
+        
+        // เพิ่มส่วนเนื้อหาแชท (ชื่อ + คอมเมนต์)
+        const content = document.createElement('div');
+        content.className = 'chat-content';
+        
+        const nickname = document.createElement('div');
+        nickname.className = 'nickname';
+        nickname.textContent = data.nickname;
+        content.appendChild(nickname);
+        
+        const comment = document.createElement('div');
+        comment.className = 'comment';
+        comment.textContent = rawComment;
+        content.appendChild(comment);
+        
+        div.appendChild(content);
+        
+        // เพิ่มเข้ากล่องแชท
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
-
-        // Removed all voice/speak related logic (filterEmoji, speak, mention filter)
+    });
+    
+    // 3. รับข้อความ "Member" (คนเข้าร่วม)
+    socket.on('member', data => {
+        const div = document.createElement('div');
+        div.className = 'msg';
+        div.style.backgroundColor = '#1A332B'; // สีเขียวเข้มสำหรับคนเข้าร่วม
+        
+        // เพิ่มรูปโปรไฟล์
+        const img = document.createElement('div');
+        img.className = 'profile-pic';
+        img.style.backgroundImage = `url('${data.profilePictureUrl}')`;
+        div.appendChild(img);
+        
+        // เพิ่มส่วนเนื้อหาแชท (ชื่อ + คอมเมนต์)
+        const content = document.createElement('div');
+        content.className = 'chat-content';
+        
+        const nickname = document.createElement('div');
+        nickname.className = 'nickname';
+        nickname.style.color = '#66BB6A'; // สีเขียวอ่อน
+        nickname.textContent = data.nickname;
+        content.appendChild(nickname);
+        
+        const action = document.createElement('div');
+        action.className = 'comment';
+        action.textContent = 'เข้าร่วม Live';
+        action.style.fontStyle = 'italic';
+        content.appendChild(action);
+        
+        div.appendChild(content);
+        
+        // เพิ่มเข้ากล่องแชท
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
     });
 
+    // 4. รับ Error
     socket.on('error', err => {
-        document.getElementById('status').textContent = '❌ ' + err.msg;
+        console.error('Socket Error:', err);
+        statusElement.textContent = '❌ ' + err.msg;
+        statusElement.style.color = '#F44336'; // สีแดง
     });
+    
+    // 5. จัดการการเชื่อมต่อ Socket ขาดหาย
+    socket.on('disconnect', () => {
+        statusElement.textContent = '⚠️ การเชื่อมต่อกับ Server หลุด! กำลังพยายามเชื่อมต่อใหม่...';
+        statusElement.style.color = '#FF9800'; // สีส้ม
+    });
+
 </script>
 </body>
 </html>
